@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Gopher Grub</title>
+        <style>
+            body {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                margin: 0;
+                height: 100%;
+                width: 100%;
+                background-color: #f7f3f3;
+                color: #000000;
+            }
+    
+            header, section {
+                width: 100%;
+                margin-bottom: 20px;
+                background-color: transparent;
+                perspective: 500px;
+            }
+    
+            #navigation ul h1 {
+                font-size: 12px;
+                line-height: 0px;
+                float: left;
+                background-color: #060606;
+    
+            }
+            
+            #navigation ul{
+                list-style-type: none;
+                background-color:#0a0a0a;
+                padding: 4px;
+                overflow: hidden;
+            }
+    
+            #navigation a {
+                color: rgb(255, 255, 255);
+                display: block;
+                text-align: center;
+                padding: 14px 16px;
+                text-decoration: none;
+                font-size: 17px;
+            }
+            
+            #navigation li{
+                float: right;
+            }
+    
+            #navigation :hover{
+                color:#0d49cc
+            }
+    
+            #rating-for-today ul {
+                padding: 0px;
+                margin: 30px;
+                font-size: 20px;
+                list-style-type: none;
+            }
+    
+            #rating-for-today ul li a {
+                font-size: 20px;
+                color: #0d49cc
+            }
+    
+            #rating-for-today ul li {
+                margin-bottom: 45px;
+                background-color: #ffff;
+                padding: 10px;
+                border: 1px solid #d39494;
+                border-radius: 10px;
+                display: flex;
+                justify-content: space-between;
+            }
+            
+            ul {
+                list-style-type: none;
+                padding: 0;
+                margin: 0;
+            }
+    
+            nav a {
+                white-space: nowrap;
+            }
+    
+            a {
+                color: #0b0900;
+                text-decoration: none;
+                transition: color 0.3s ease-in-out;
+            }
+    
+            a:hover {
+                color: #0d49cc;
+                text-decoration: underline;
+            }
+        </style>
+    </head>
+<body>
+    <section id = "navigation">
+        <nav class = "nav">
+            <ul>
+                <h1><a href = "index.html"><font size = 5>Gopher Grub</font></a></h1>
+                <li><a href = "https://dineoncampus.com/UMN/whats-on-the-menu" target="_blank" rel="noopener noreferrer"> Today's Menu </a></li>
+                <li><a href = "review.html"> Rate a Dining Hall </a></li>
+                
+            </ul>
+         </nav>
+     </section>
+     <section id="rating-for-today">
+        <h2><font size = 8>Ratings for Today</font></h2>
+        <h3><font size = 6>Dining Halls:</font></h3>
+        <ul>
+            <li>
+                <span id="avg-17th-ave">17th Ave: <span id="rating-17th-ave">N/A</span> (<span id="count-17th-ave">0</span> reviews)</span>
+                <a href="#" onclick="showComments('17th Ave')">View Comments</a>
+            </li>
+            <li>
+                <span id="avg-pioneer">Pioneer: <span id="rating-pioneer">N/A</span> (<span id="count-pioneer">0</span> reviews)</span>
+                <a href="#" onclick="showComments('Pioneer')">View Comments</a>
+            </li>
+            <li>
+                <span id="avg-sanford">Sanford: <span id="rating-sanford">N/A</span> (<span id="count-sanford">0</span> reviews)</span>
+                <a href="#" onclick="showComments('Sanford')">View Comments</a>
+            </li>
+            <li>
+                <span id="avg-middlebrook">Middlebrook: <span id="rating-middlebrook">N/A</span> (<span id="count-middlebrook">0</span> reviews)</span>
+                <a href="#" onclick="showComments('Middlebrook')">View Comments</a>
+            </li>
+            <li>
+                <span id="avg-comstock">Comstock: <span id="rating-comstock">N/A</span> (<span id="count-comstock">0</span> reviews)</span>
+                <a href="#" onclick="showComments('Comstock')">View Comments</a>
+            </li>
+        </ul>
+        <div id="comments"></div>
+    </section>
+    <script>
+        async function updateAverageRatings() {
+            const diningHalls = ['17th Ave', 'Pioneer', 'Sanford', 'Middlebrook', 'Comstock'];
+            for (const hall of diningHalls) {
+                const response = await fetch(`https://infinite-ridge-26828-fac64c36bb20.herokuapp.com/reviews/${hall}`);
+                const data = await response.json();
+                const averageRating = data.averageRating.toFixed(2);
+                const reviewCount = data.reviews.length;
+                document.getElementById(`rating-${hall.toLowerCase().replace(' ', '-')}`).innerText = averageRating === 'NaN' ? 'N/A' : averageRating;
+                document.getElementById(`count-${hall.toLowerCase().replace(' ', '-')}`).innerText = reviewCount;
+            }
+        }
+        async function showComments(diningHall) {
+            const response = await fetch(`https://infinite-ridge-26828-fac64c36bb20.herokuapp.com/reviews/${diningHall}`);
+            const data = await response.json();
+
+            const commentsContainer = document.getElementById('comments');
+            commentsContainer.innerHTML = `<h3>Comments for ${diningHall}</h3>`;
+            if(data.reviews.length == 0) {
+                commentsContainer.innerHTML = '<p><strong><font size = 5>No reviews and comments yet</font></strong></p>'
+            }
+            data.reviews.forEach(review => {
+                if (review.comment) {
+                const commentElement = document.createElement('div');
+                commentElement.innerHTML = `
+                    <p><strong>Rating:</strong> ${review.rating}</p>
+                    <p><strong>Comment:</strong> ${review.comment}</p>
+                    <hr>
+                `;
+                commentsContainer.appendChild(commentElement);
+                }
+            });
+        }
+        updateAverageRatings();
+    </script>
+</body>
+</html>
+
+    
