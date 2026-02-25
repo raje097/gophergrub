@@ -54,9 +54,20 @@ async function loadSummary() {
   });
 
   summaryEl.innerHTML = `
-    <div class="muted small">Todays Reviews: ${totalReviews}</div>
+    <div class="muted small">Total reviews today: ${totalReviews}</div>
     <div class="reviews" style="margin-top:10px">${rows.join("")}</div>
   `;
+}
+
+async function vote(id, direction) {
+  await fetchJSON(`/api/reviews/${id}/vote`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ direction })
+  });
+
+  await loadSummary();
+  await loadReviews();
 }
 
 async function loadReviews() {
@@ -65,21 +76,41 @@ async function loadReviews() {
   const { reviews } = await fetchJSON(url);
 
   if (reviews.length === 0) {
-    reviewsEl.innerHTML = `<div class="muted">No reviews yet. Be the first!</div>`;
+    reviewsEl.innerHTML = `<div class="muted">No reviews yet today. Be the first!</div>`;
     return;
   }
 
   reviewsEl.innerHTML = reviews
-    .map(
-      (r) => `<div class="review">
+    .map((r) => {
+      const up = Number.isInteger(r.upvotes) ? r.upvotes : 0;
+      const down = Number.isInteger(r.downvotes) ? r.downvotes : 0;
+      const score = up - down;
+
+      const viewerVote = r.viewerVote; // "up" | "down" | null
+      const votedText =
+        viewerVote === "up" ? "You voted 👍" :
+        viewerVote === "down" ? "You voted 👎" :
+        "";
+
+      const upDisabled = viewerVote !== null;   // one vote total
+      const downDisabled = viewerVote !== null; // one vote total
+
+      return `<div class="review">
         <div class="reviewTop">
           <strong>${r.hall}</strong>
           <span class="badge">${stars(r.rating)} (${r.rating})</span>
         </div>
         <div class="muted small">${fmtDate(r.createdAt)}</div>
         <p style="margin:10px 0 0">${escapeHTML(r.comment)}</p>
-      </div>`
-    )
+
+        <div class="voteRow">
+          <button class="voteBtn" data-vote="up" data-id="${r.id}" ${upDisabled ? "disabled" : ""} aria-label="Upvote">▲</button>
+          <button class="voteBtn" data-vote="down" data-id="${r.id}" ${downDisabled ? "disabled" : ""} aria-label="Downvote">▼</button>
+          <span class="voteScore">Score: ${score} (↑${up} / ↓${down})</span>
+          ${votedText ? `<span class="voteYou">${votedText}</span>` : ""}
+        </div>
+      </div>`;
+    })
     .join("");
 }
 
@@ -94,6 +125,23 @@ function escapeHTML(s) {
 }
 
 hallFilterEl.addEventListener("change", loadReviews);
+
+// One click handler for all vote buttons (event delegation)
+reviewsEl.addEventListener("click", async (e) => {
+  const btn = e.target.closest("button[data-vote]");
+  if (!btn) return;
+
+  if (btn.disabled) return;
+
+  const id = btn.dataset.id;
+  const dir = btn.dataset.vote; // "up" or "down"
+
+  try {
+    await vote(id, dir);
+  } catch (err) {
+    alert(err.message);
+  }
+});
 
 await loadHalls();
 await loadSummary();

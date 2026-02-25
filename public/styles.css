@@ -127,3 +127,45 @@
   }
   .status.ok { color: #8ef0b0; }
   .status.err { color: #ffb4b4; }
+  
+  /* ---------- Voting UI ---------- */
+  .voteRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  
+  .voteBtn {
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-weight: 700;
+  }
+  
+  .voteBtn:hover {
+    background: rgba(255,255,255,0.10);
+  }
+  
+  .voteBtn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  
+  .voteScore {
+    color: var(--muted);
+    font-size: 13px;
+  }
+  
+  .voteYou {
+    color: var(--muted);
+    font-size: 13px;
+    border: 1px solid var(--border);
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.02);
+  }

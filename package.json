@@ -8,6 +8,7 @@
     "start": "node server.mjs"
   },
   "dependencies": {
+    "cookie-parser": "^1.4.6",
     "express": "^4.19.2",
     "lowdb": "^7.0.1",
     "nanoid": "^5.0.7"

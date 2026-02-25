@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
+import cookieParser from "cookie-parser";
 import { Low } from "lowdb";
 import { JSONFile } from "lowdb/node";
 import { nanoid } from "nanoid";
@@ -15,7 +16,7 @@ const __dirname = path.dirname(__filename);
 // ---------- DB (lowdb) ----------
 const dbFile = path.join(__dirname, "db.json");
 const adapter = new JSONFile(dbFile);
-const db = new Low(adapter, { reviews: [], lastResetDate: null });
+const db = new Low(adapter, { reviews: [], lastResetDate: null, votes: {} });
 
 /**
  * Returns YYYY-MM-DD for America/Chicago (Central Time),
@@ -28,35 +29,35 @@ function chicagoTodayKey(date = new Date()) {
     month: "2-digit",
     day: "2-digit",
   });
-  // en-CA outputs YYYY-MM-DD
-  return formatter.format(date);
+  return formatter.format(date); // YYYY-MM-DD
 }
 
 async function ensureDbShape() {
   await db.read();
-  db.data ||= { reviews: [], lastResetDate: null };
+  db.data ||= { reviews: [], lastResetDate: null, votes: {} };
 
-  // In case an old db.json only had reviews
   if (!Array.isArray(db.data.reviews)) db.data.reviews = [];
   if (!("lastResetDate" in db.data)) db.data.lastResetDate = null;
+  if (typeof db.data.votes !== "object" || db.data.votes === null) db.data.votes = {};
 
   await db.write();
 }
 
 /**
  * Resets reviews once per day based on America/Chicago date.
- * Runs on startup + periodically while server is running.
+ * Clears votes too (since reviews reset anyway).
  */
 async function resetIfNewChicagoDay() {
   await db.read();
-  db.data ||= { reviews: [], lastResetDate: null };
+  db.data ||= { reviews: [], lastResetDate: null, votes: {} };
 
   const today = chicagoTodayKey();
   if (db.data.lastResetDate !== today) {
     db.data.reviews = [];
+    db.data.votes = {};
     db.data.lastResetDate = today;
     await db.write();
-    console.log(`[daily-reset] Cleared reviews for new day (CT): ${today}`);
+    console.log(`[daily-reset] Cleared reviews/votes for new day (CT): ${today}`);
   }
 }
 
@@ -73,14 +74,32 @@ setInterval(() => {
 
 // ---------- Middleware ----------
 app.use(express.json());
+app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
+
+// Anonymous “person id” cookie (no account)
+app.use((req, res, next) => {
+  let id = req.cookies.ggid;
+  if (!id) {
+    id = nanoid();
+    res.cookie("ggid", id, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false, // set true when using HTTPS in production
+      maxAge: 1000 * 60 * 60 * 24 * 365, // 1 year
+    });
+  }
+  req.ggid = id;
+  next();
+});
 
 // ---------- Helpers ----------
 const DINING_HALLS = [
   "Comstock Dining Hall",
-  "Pioneer Hall",
-  "17th Avenue Dining Center",
-  "Centennial Hall",
+  "Pioneer Dining Hall",
+  "17th Avenue Dining Hall",
+  "Middlebrook Hall",
+  "Sanford Hall"
 ];
 
 function isValidHall(name) {
@@ -91,6 +110,11 @@ function isIntInRange(n, min, max) {
   return Number.isInteger(n) && n >= min && n <= max;
 }
 
+function normalizeVoteCounts(review) {
+  review.upvotes = Number.isInteger(review.upvotes) ? review.upvotes : 0;
+  review.downvotes = Number.isInteger(review.downvotes) ? review.downvotes : 0;
+}
+
 // ---------- API ----------
 app.get("/api/halls", (req, res) => {
   res.json({ halls: DINING_HALLS });
@@ -99,6 +123,8 @@ app.get("/api/halls", (req, res) => {
 app.get("/api/reviews", async (req, res) => {
   await db.read();
   const reviews = db.data.reviews ?? [];
+  const votes = db.data.votes ?? {};
+  const viewerVotes = votes[req.ggid] ?? {};
 
   // optional filter: ?hall=Comstock%20Dining%20Hall
   const hall = req.query.hall;
@@ -107,7 +133,13 @@ app.get("/api/reviews", async (req, res) => {
   // newest first
   filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  res.json({ reviews: filtered });
+  // attach viewerVote so UI can disable buttons
+  const withViewerVote = filtered.map((r) => ({
+    ...r,
+    viewerVote: viewerVotes[r.id] ?? null, // "up" | "down" | null
+  }));
+
+  res.json({ reviews: withViewerVote });
 });
 
 app.post("/api/reviews", async (req, res) => {
@@ -134,13 +166,64 @@ app.post("/api/reviews", async (req, res) => {
     rating,
     comment: comment.trim(),
     createdAt: new Date().toISOString(),
+    upvotes: 0,
+    downvotes: 0,
   };
 
   await db.read();
   db.data.reviews.push(review);
   await db.write();
 
-  res.status(201).json({ review });
+  res.status(201).json({ review: { ...review, viewerVote: null } });
+});
+
+/**
+ * One-vote-per-person endpoint (anonymous cookie ID).
+ * Body: { direction: "up" | "down" }
+ *
+ * Rules:
+ * - First vote applies
+ * - Voting same direction again does nothing
+ * - Voting opposite direction switches vote (adjusts counts)
+ */
+app.post("/api/reviews/:id/vote", async (req, res) => {
+  const { id } = req.params;
+  const { direction } = req.body ?? {};
+
+  if (direction !== "up" && direction !== "down") {
+    return res.status(400).json({ error: 'direction must be "up" or "down".' });
+  }
+
+  await db.read();
+  db.data.votes ||= {};
+
+  const review = db.data.reviews.find((r) => r.id === id);
+  if (!review) return res.status(404).json({ error: "Review not found." });
+
+  normalizeVoteCounts(review);
+
+  const ggid = req.ggid;
+  db.data.votes[ggid] ||= {};
+  const prev = db.data.votes[ggid][id] ?? null; // "up" | "down" | null
+
+  // no-op if same direction
+  if (prev === direction) {
+    await db.write();
+    return res.json({ review: { ...review, viewerVote: prev } });
+  }
+
+  // remove previous vote if it existed
+  if (prev === "up") review.upvotes = Math.max(0, review.upvotes - 1);
+  if (prev === "down") review.downvotes = Math.max(0, review.downvotes - 1);
+
+  // apply new vote
+  if (direction === "up") review.upvotes += 1;
+  if (direction === "down") review.downvotes += 1;
+
+  db.data.votes[ggid][id] = direction;
+
+  await db.write();
+  res.json({ review: { ...review, viewerVote: direction } });
 });
 
 app.delete("/api/reviews/:id", async (req, res) => {
@@ -152,6 +235,15 @@ app.delete("/api/reviews/:id", async (req, res) => {
 
   if (db.data.reviews.length === before) {
     return res.status(404).json({ error: "Review not found." });
+  }
+
+  // also clean votes referencing this review (optional but nice)
+  if (db.data.votes) {
+    for (const ggid of Object.keys(db.data.votes)) {
+      if (db.data.votes[ggid] && db.data.votes[ggid][id]) {
+        delete db.data.votes[ggid][id];
+      }
+    }
   }
 
   await db.write();
@@ -175,18 +267,6 @@ app.get("/api/summary", async (req, res) => {
   }
 
   res.json({ byHall, totalReviews: reviews.length });
-});
-
-app.get("/api/reset-info", async (req, res) => {
-  await db.read();
-  const lastResetDate = db.data?.lastResetDate ?? null;
-
-  res.json({
-    timeZone: "America/Chicago",
-    resetsAt: "00:00", // midnight
-    lastResetDate,
-    today: chicagoTodayKey(),
-  });
 });
 
 // fallback: serve index.html (optional)

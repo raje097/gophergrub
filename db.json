@@ -1,12 +1,5 @@
 {
-  "reviews": [
-    {
-      "id": "n0IXlkX5KlChnr0_0B3BU",
-      "hall": "Pioneer Hall",
-      "rating": 1,
-      "comment": "so dirty",
-      "createdAt": "2026-02-25T05:27:32.669Z"
-    }
-  ],
-  "lastResetDate": "2026-02-24"
+  "reviews": [],
+  "lastResetDate": "2026-02-25",
+  "votes": {}
 }
