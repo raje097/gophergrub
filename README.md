@@ -11,7 +11,10 @@ umngg.com
 
 ## Project Description
 
-## Usage
+## Run locally
+```bash
+npm install
+npm run dev
 
 ## Group Credits
 ### Muhil Ramesh

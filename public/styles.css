@@ -1,0 +1,129 @@
+:root {
+    --bg: #0b0f17;
+    --card: #121a26;
+    --text: #e8eefc;
+    --muted: #a9b4cc;
+    --border: rgba(255, 255, 255, 0.08);
+  }
+  
+  * { box-sizing: border-box; }
+  
+  body {
+    margin: 0;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    background: radial-gradient(1200px 600px at 20% 0%, rgba(79, 70, 229, 0.18), transparent), var(--bg);
+    color: var(--text);
+  }
+  
+  .container {
+    width: min(980px, calc(100% - 32px));
+    margin: 0 auto;
+  }
+  
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 24px 0 8px;
+  }
+  
+  .nav { display: flex; gap: 10px; align-items: center; }
+  
+  h1 { margin: 0 0 4px; font-size: 28px; }
+  h2 { margin: 0 0 12px; font-size: 18px; }
+  
+  .muted { color: var(--muted); }
+  .small { font-size: 12px; }
+  
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 12px 0 30px;
+  }
+  
+  .card {
+    background: rgba(18, 26, 38, 0.92);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  }
+  
+  .btn {
+    appearance: none;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 12px;
+    text-decoration: none;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .btn:hover { background: rgba(255,255,255,0.10); }
+  .btn.ghost { background: transparent; }
+  
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  
+  select, textarea {
+    width: 100%;
+    margin-top: 6px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.03);
+    color: var(--text);
+    outline: none;
+  }
+  textarea { resize: vertical; }
+  
+  .form {
+    display: grid;
+    gap: 14px;
+  }
+  
+  .reviews {
+    display: grid;
+    gap: 12px;
+    margin-top: 10px;
+  }
+  
+  .review {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px;
+    background: rgba(255,255,255,0.02);
+  }
+  
+  .reviewTop {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  
+  .badge {
+    font-size: 12px;
+    padding: 2px 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--muted);
+  }
+  
+  .footer {
+    padding: 18px 0 30px;
+  }
+  
+  .status {
+    margin-top: 8px;
+    font-size: 14px;
+  }
+  .status.ok { color: #8ef0b0; }
+  .status.err { color: #ffb4b4; }

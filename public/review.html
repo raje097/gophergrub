@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Write a Review • GopherGrub</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="container header">
+      <div>
+        <h1>Write a review</h1>
+        <p class="muted">Keep it helpful and honest.</p>
+      </div>
+      <nav class="nav">
+        <a class="btn ghost" href="/">Back</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <section class="card">
+        <form id="reviewForm" class="form">
+          <label>
+            Dining hall
+            <select id="hall" required></select>
+          </label>
+
+          <label>
+            Rating (1–5)
+            <select id="rating" required>
+              <option value="5">5 - Great</option>
+              <option value="4">4 - Good</option>
+              <option value="3">3 - Okay</option>
+              <option value="2">2 - Meh</option>
+              <option value="1">1 - Bad</option>
+            </select>
+          </label>
+
+          <label>
+            Comment
+            <textarea id="comment" maxlength="500" rows="5" required placeholder="What was good/bad? Food, wait time, cleanliness, etc."></textarea>
+            <div class="muted small" id="charCount">0 / 500</div>
+          </label>
+
+          <button class="btn" type="submit">Submit review</button>
+
+          <div id="status" class="status"></div>
+        </form>
+      </section>
+    </main>
+
+    <script type="module" src="./review.js"></script>
+  </body>
+</html>

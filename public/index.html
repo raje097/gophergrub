@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>GopherGrub</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="container header">
+      <div>
+        <h1>GopherGrub</h1>
+        <p class="muted">Rate University of Minnesota dining halls.</p>
+      </div>
+      <nav class="nav">
+        <a class="btn" href="/review.html">Write a review</a>
+      </nav>
+    </header>
+
+    <main class="container grid">
+      <section class="card">
+        <h2>Overall summary</h2>
+        <div id="summary" class="summary"></div>
+      </section>
+
+      <section class="card">
+        <div class="row">
+          <h2>Recent reviews</h2>
+          <div class="row">
+            <label class="muted" for="hallFilter">Filter:</label>
+            <select id="hallFilter"></select>
+          </div>
+        </div>
+        <div id="reviews" class="reviews"></div>
+      </section>
+    </main>
+
+    <footer class="container footer muted">
+      Built for UMN students • Local demo app
+    </footer>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
