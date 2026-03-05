@@ -1,69 +1,60 @@
 {
   "reviews": [
     {
-      "id": "sPkg3n9TRCyLoKTCdEU-E",
-      "hall": "Comstock Dining Hall",
-      "rating": 5,
-      "comment": "yummy",
-      "createdAt": "2026-03-05T02:22:08.056Z",
-      "upvotes": 0,
-      "downvotes": 1
-    },
-    {
-      "id": "Rcd-Naz7XqaShuaVchVkP",
+      "id": "1q3tw9-PBLeLfwmVDKv7X",
       "hall": "Comstock Dining Hall",
       "rating": 3,
-      "comment": "it was fine ig",
-      "createdAt": "2026-03-05T02:42:59.128Z",
-      "upvotes": 1,
+      "comment": "Really mid food",
+      "createdAt": "2026-03-05T04:56:35.232Z",
+      "upvotes": 0,
       "downvotes": 0
     },
     {
-      "id": "LioRAKaLFE7M6wYFH0nqv",
-      "hall": "17th Avenue Dining Hall",
+      "id": "Re46nsJaMGq0XVJKLO41Z",
+      "hall": "17th Avenue Dining Center",
+      "rating": 3,
+      "comment": "yea it was okay",
+      "createdAt": "2026-03-05T04:56:45.139Z",
+      "upvotes": 0,
+      "downvotes": 0
+    },
+    {
+      "id": "apXbefcGBWAALQ9nKA_xT",
+      "hall": "Comstock Dining Hall",
+      "rating": 5,
+      "comment": "the dessert was awesome!",
+      "createdAt": "2026-03-05T04:57:12.258Z",
+      "upvotes": 0,
+      "downvotes": 0
+    },
+    {
+      "id": "4iDjT289AYMPe_DaqtYqM",
+      "hall": "Centennial Hall",
+      "rating": 1,
+      "comment": "this doesnt have a dining hall....",
+      "createdAt": "2026-03-05T04:57:30.540Z",
+      "upvotes": 0,
+      "downvotes": 0
+    },
+    {
+      "id": "gMwyQSZm-YGWknkNF3s3U",
+      "hall": "Pioneer Hall",
       "rating": 4,
-      "comment": "great, but soda was bad",
-      "createdAt": "2026-03-05T02:43:26.214Z",
+      "comment": "love it",
+      "createdAt": "2026-03-05T04:57:43.922Z",
       "upvotes": 0,
-      "downvotes": 1
-    },
-    {
-      "id": "x_8Z7OfyMNogaM3i3lUlL",
-      "hall": "Comstock Dining Hall",
-      "rating": 5,
-      "comment": "yummy",
-      "createdAt": "2026-03-05T04:20:17.603Z",
-      "upvotes": 0,
-      "downvotes": 1
-    },
-    {
-      "id": "rah9rHaXahIbbJ3OivCfq",
-      "hall": "Comstock Dining Hall",
-      "rating": 5,
-      "comment": "super stupid garbage",
-      "createdAt": "2026-03-05T04:24:45.078Z",
-      "upvotes": 1,
       "downvotes": 0
     },
     {
-      "id": "ZybCAzrU7QGABu_AzY56H",
-      "hall": "17th Avenue Hall",
-      "rating": 3,
-      "comment": "hiiii",
-      "createdAt": "2026-03-05T04:30:02.260Z",
+      "id": "4RVkXAWYL_gWb-oCHhxcr",
+      "hall": "17th Avenue Dining Center",
+      "rating": 2,
+      "comment": "center more like meher",
+      "createdAt": "2026-03-05T04:57:55.122Z",
       "upvotes": 0,
       "downvotes": 0
     }
   ],
   "lastResetDate": "2026-03-04",
-  "votes": {
-    "JOXlhqLj9YsDAZ0UwIs_r": {
-      "sPkg3n9TRCyLoKTCdEU-E": "down",
-      "Rcd-Naz7XqaShuaVchVkP": "up",
-      "LioRAKaLFE7M6wYFH0nqv": "down",
-      "rah9rHaXahIbbJ3OivCfq": "up",
-      "x_8Z7OfyMNogaM3i3lUlL": "down"
-    }
-  },
   "aiSummaries": {}
 }

@@ -173,7 +173,7 @@ async function loadReviews() {
   const url = hall ? `/api/reviews?hall=${encodeURIComponent(hall)}` : "/api/reviews";
   const { reviews } = await fetchJSON(url);
 
-  const sorted = sortReviews(reviews);
+  const sorted = sortReviews(reviews).slice(0, 5);
 
   if (sorted.length === 0) {
     reviewsEl.innerHTML = `<div class="muted">No reviews yet today. Be the first!</div>`;
