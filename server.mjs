@@ -100,10 +100,11 @@ app.use((req, res, next) => {
 
 // ---------- Helpers ----------
 const DINING_HALLS = [
+  "17th Avenue Hall",
+  "Bailey Hall",
   "Comstock Dining Hall",
   "Pioneer Hall",
-  "17th Avenue Dining Center",
-  "Centennial Hall",
+  "Sanford Hall",
 ];
 
 function isValidHall(name) {
