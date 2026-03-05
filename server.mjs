@@ -9,38 +9,11 @@ import { nanoid } from "nanoid";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// OpenAI moderation
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-
-async function moderateText(text) {
-  // If no key is configured (local dev), allow everything
-  if (!OPENAI_API_KEY) return { allowed: true };
-
-  const resp = await fetch("https://api.openai.com/v1/moderations", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "omni-moderation-latest",
-      input: text,
-    }),
-  });
-
-  if (!resp.ok) {
-    // Fail open (allow) or fail closed (block). I'd fail open to avoid breaking submissions.
-    // You can change this depending on your preference.
-    return { allowed: true, reason: "moderation_unavailable" };
-  }
-
-  const data = await resp.json();
-  const result = data?.results?.[0];
-
-  // OpenAI moderation returns a "flagged" boolean at the top-level result
-  const flagged = Boolean(result?.flagged);
-
-  return { allowed: !flagged, flagged, result };
-}
+// If true: if moderation API errors/timeouts, reject the comment.
+// If false: allow comment if moderation is unavailable.
+const MODERATION_FAIL_CLOSED = process.env.MODERATION_FAIL_CLOSED === "true";
 
 // __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -94,6 +67,58 @@ async function resetIfNewChicagoDay() {
   }
 }
 
+// ---------- Moderation ----------
+async function moderateText(text) {
+  // If no key is configured, skip moderation (useful for local dev).
+  if (!OPENAI_API_KEY) {
+    return { allowed: true, reason: "no_api_key" };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3000);
+
+  try {
+    const resp = await fetch("https://api.openai.com/v1/moderations", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "omni-moderation-latest",
+        input: text,
+      }),
+    });
+
+    if (!resp.ok) {
+      const bodyText = await resp.text().catch(() => "");
+      console.error("[moderation] Non-OK response:", resp.status, bodyText);
+
+      if (MODERATION_FAIL_CLOSED) {
+        return { allowed: false, reason: "moderation_error" };
+      }
+      return { allowed: true, reason: "moderation_error_fail_open" };
+    }
+
+    const data = await resp.json();
+    const result = data?.results?.[0];
+    const flagged = Boolean(result?.flagged);
+
+    return { allowed: !flagged, flagged, reason: flagged ? "flagged" : "ok" };
+  } catch (err) {
+    const msg = err?.name === "AbortError" ? "timeout" : String(err);
+    console.error("[moderation] Request failed:", msg);
+
+    if (MODERATION_FAIL_CLOSED) {
+      return { allowed: false, reason: "moderation_unavailable" };
+    }
+    return { allowed: true, reason: "moderation_unavailable_fail_open" };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 // Initialize DB and run reset check immediately
 await ensureDbShape();
 await resetIfNewChicagoDay();
@@ -110,6 +135,9 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
+// Trust proxy so req.secure works correctly on Render
+app.set("trust proxy", 1);
+
 // Anonymous “person id” cookie (no account)
 app.use((req, res, next) => {
   let id = req.cookies.ggid;
@@ -118,7 +146,7 @@ app.use((req, res, next) => {
     res.cookie("ggid", id, {
       httpOnly: true,
       sameSite: "lax",
-      secure: false, // set true when using HTTPS in production
+      secure: req.secure, // true on HTTPS (Render)
       maxAge: 1000 * 60 * 60 * 24 * 365, // 1 year
     });
   }
@@ -129,10 +157,9 @@ app.use((req, res, next) => {
 // ---------- Helpers ----------
 const DINING_HALLS = [
   "Comstock Dining Hall",
-  "Pioneer Dining Hall",
-  "17th Avenue Dining Hall",
-  "Middlebrook Hall",
-  "Sanford Hall"
+  "Pioneer Hall",
+  "17th Avenue Dining Center",
+  "Centennial Hall",
 ];
 
 function isValidHall(name) {
@@ -185,18 +212,19 @@ app.post("/api/reviews", async (req, res) => {
     return res.status(400).json({ error: "Rating must be an integer 1–5." });
   }
   if (typeof comment !== "string" || comment.trim().length < 3) {
-    return res
-      .status(400)
-      .json({ error: "Comment must be at least 3 characters." });
+    return res.status(400).json({ error: "Comment must be at least 3 characters." });
   }
   if (comment.length > 500) {
     return res.status(400).json({ error: "Comment must be <= 500 characters." });
   }
 
-  const mod = await moderateText(comment);
+  // ---- Moderation check (THIS is the key part) ----
+  const trimmed = comment.trim();
+  const mod = await moderateText(trimmed);
   if (!mod.allowed) {
     return res.status(400).json({
-      error: "Your comment was flagged for inappropriate language. Please revise and try again.",
+      error:
+        "Your comment was flagged for inappropriate language. Please revise and try again.",
     });
   }
 
@@ -204,7 +232,7 @@ app.post("/api/reviews", async (req, res) => {
     id: nanoid(),
     hall,
     rating,
-    comment: comment.trim(),
+    comment: trimmed,
     createdAt: new Date().toISOString(),
     upvotes: 0,
     downvotes: 0,
@@ -220,11 +248,6 @@ app.post("/api/reviews", async (req, res) => {
 /**
  * One-vote-per-person endpoint (anonymous cookie ID).
  * Body: { direction: "up" | "down" }
- *
- * Rules:
- * - First vote applies
- * - Voting same direction again does nothing
- * - Voting opposite direction switches vote (adjusts counts)
  */
 app.post("/api/reviews/:id/vote", async (req, res) => {
   const { id } = req.params;
@@ -316,4 +339,7 @@ app.get("*", (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`GopherGrub running at http://localhost:${PORT}`);
+  console.log(
+    `[moderation] enabled=${Boolean(OPENAI_API_KEY)} failClosed=${MODERATION_FAIL_CLOSED}`
+  );
 });
