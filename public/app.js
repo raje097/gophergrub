@@ -48,6 +48,8 @@ async function loadHalls() {
     opt.textContent = hall;
     hallFilterEl.appendChild(opt);
   }
+
+  return halls;
 }
 
 async function loadSummary() {
@@ -80,14 +82,22 @@ async function loadSummary() {
     `;
   }
 
+  // Render the hall list with placeholders for AI summary
   const rows = hallEntries.map((h) => {
     const avgText = h.avg == null ? "—" : `${h.avg} / 5`;
+    const safeHall = escapeHTML(h.hall);
+
     return `<div class="review">
       <div class="reviewTop">
-        <strong>${escapeHTML(h.hall)}</strong>
+        <strong>${safeHall}</strong>
         <span class="badge">${h.count} review${h.count === 1 ? "" : "s"}</span>
       </div>
       <div class="muted">Average: ${avgText}</div>
+
+      <div class="aiLine">
+        <span class="aiChip">AI</span>
+        <span class="aiSummary" data-hall="${escapeHTML(h.hall)}">Loading summary…</span>
+      </div>
     </div>`;
   });
 
@@ -95,6 +105,28 @@ async function loadSummary() {
     <div class="muted small">Total reviews today: ${totalReviews}</div>
     <div class="reviews" style="margin-top:10px">${rows.join("")}</div>
   `;
+
+  // Fill AI summaries AFTER the HTML is on the page
+  await fillAiSummaries(hallEntries.map((h) => h.hall));
+}
+
+async function fillAiSummaries(halls) {
+  // For each hall, fetch /api/ai-summary and place text into matching element
+  // Do them in parallel to keep it fast.
+  const tasks = halls.map(async (hall) => {
+    const el = summaryEl.querySelector(`.aiSummary[data-hall="${CSS.escape(hall)}"]`);
+    if (!el) return;
+
+    try {
+      const data = await fetchJSON(`/api/ai-summary?hall=${encodeURIComponent(hall)}`);
+      el.textContent = data.summary || "No summary available.";
+    } catch (err) {
+      // Don't crash the page if AI summary fails
+      el.textContent = "AI summary unavailable.";
+    }
+  });
+
+  await Promise.all(tasks);
 }
 
 async function vote(id, direction) {
@@ -112,7 +144,6 @@ function sortReviews(reviews) {
   const mode = sortSelectEl.value;
 
   if (mode === "newest") {
-    // newest first
     return [...reviews].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
 
@@ -161,9 +192,7 @@ async function loadReviews() {
         viewerVote === "down" ? "You voted 👎" :
         "";
 
-      // One vote per person total
-      const upDisabled = viewerVote !== null;
-      const downDisabled = viewerVote !== null;
+      const disabled = viewerVote !== null;
 
       return `<div class="review">
         <div class="reviewTop">
@@ -174,8 +203,8 @@ async function loadReviews() {
         <p style="margin:10px 0 0">${escapeHTML(r.comment)}</p>
 
         <div class="voteRow">
-          <button class="voteBtn" data-vote="up" data-id="${r.id}" ${upDisabled ? "disabled" : ""} aria-label="Upvote">▲</button>
-          <button class="voteBtn" data-vote="down" data-id="${r.id}" ${downDisabled ? "disabled" : ""} aria-label="Downvote">▼</button>
+          <button class="voteBtn" data-vote="up" data-id="${r.id}" ${disabled ? "disabled" : ""} aria-label="Upvote">▲</button>
+          <button class="voteBtn" data-vote="down" data-id="${r.id}" ${disabled ? "disabled" : ""} aria-label="Downvote">▼</button>
           <span class="voteScore">Score: ${score} (↑${up} / ↓${down})</span>
           ${votedText ? `<span class="voteYou">${votedText}</span>` : ""}
         </div>
@@ -187,14 +216,13 @@ async function loadReviews() {
 hallFilterEl.addEventListener("change", loadReviews);
 sortSelectEl.addEventListener("change", loadReviews);
 
-// One click handler for all vote buttons (event delegation)
 reviewsEl.addEventListener("click", async (e) => {
   const btn = e.target.closest("button[data-vote]");
   if (!btn) return;
   if (btn.disabled) return;
 
   const id = btn.dataset.id;
-  const dir = btn.dataset.vote; // "up" or "down"
+  const dir = btn.dataset.vote;
 
   try {
     await vote(id, dir);
@@ -203,6 +231,7 @@ reviewsEl.addEventListener("click", async (e) => {
   }
 });
 
+// Boot
 await loadHalls();
 await loadSummary();
 await loadReviews();
