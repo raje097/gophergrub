@@ -1,6 +1,8 @@
 const summaryEl = document.querySelector("#summary");
+const topHallEl = document.querySelector("#topHall");
 const reviewsEl = document.querySelector("#reviews");
 const hallFilterEl = document.querySelector("#hallFilter");
+const sortSelectEl = document.querySelector("#sortSelect");
 
 function stars(n) {
   return "★★★★★☆☆☆☆☆".slice(5 - n, 10 - n);
@@ -19,6 +21,16 @@ async function fetchJSON(url, opts) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `Request failed: ${res.status}`);
   return data;
+}
+
+// basic HTML escaping for safety
+function escapeHTML(s) {
+  return String(s)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 async function loadHalls() {
@@ -41,15 +53,41 @@ async function loadHalls() {
 async function loadSummary() {
   const { byHall, totalReviews } = await fetchJSON("/api/summary");
 
-  const rows = Object.entries(byHall).map(([hall, s]) => {
-    const avg = s.avgRating == null ? "—" : `${s.avgRating} / 5`;
-    const count = s.count;
+  // Top dining hall of the day: highest avgRating, tie-break by most reviews
+  const hallEntries = Object.entries(byHall).map(([hall, s]) => ({
+    hall,
+    count: s.count,
+    avg: s.avgRating,
+  }));
+
+  const candidates = hallEntries.filter((h) => h.count > 0 && typeof h.avg === "number");
+
+  if (candidates.length === 0) {
+    topHallEl.innerHTML = `<div class="muted">No top hall yet — be the first to review today.</div>`;
+  } else {
+    candidates.sort((a, b) => {
+      if (b.avg !== a.avg) return b.avg - a.avg;
+      return b.count - a.count;
+    });
+
+    const top = candidates[0];
+    topHallEl.innerHTML = `
+      <div class="topHallBadge">
+        <span class="topHallLabel">Top dining hall today</span>
+        <span class="topHallName">${escapeHTML(top.hall)}</span>
+        <span class="topHallMeta">${top.avg.toFixed(2)} / 5 • ${top.count} review${top.count === 1 ? "" : "s"}</span>
+      </div>
+    `;
+  }
+
+  const rows = hallEntries.map((h) => {
+    const avgText = h.avg == null ? "—" : `${h.avg} / 5`;
     return `<div class="review">
       <div class="reviewTop">
-        <strong>${hall}</strong>
-        <span class="badge">${count} review${count === 1 ? "" : "s"}</span>
+        <strong>${escapeHTML(h.hall)}</strong>
+        <span class="badge">${h.count} review${h.count === 1 ? "" : "s"}</span>
       </div>
-      <div class="muted">Average: ${avg}</div>
+      <div class="muted">Average: ${avgText}</div>
     </div>`;
   });
 
@@ -63,11 +101,40 @@ async function vote(id, direction) {
   await fetchJSON(`/api/reviews/${id}/vote`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ direction })
+    body: JSON.stringify({ direction }),
   });
 
   await loadSummary();
   await loadReviews();
+}
+
+function sortReviews(reviews) {
+  const mode = sortSelectEl.value;
+
+  if (mode === "newest") {
+    // newest first
+    return [...reviews].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+
+  // "top" = vote score first (up - down), then upvotes, then rating, then newest
+  return [...reviews].sort((a, b) => {
+    const aUp = Number.isInteger(a.upvotes) ? a.upvotes : 0;
+    const aDown = Number.isInteger(a.downvotes) ? a.downvotes : 0;
+    const bUp = Number.isInteger(b.upvotes) ? b.upvotes : 0;
+    const bDown = Number.isInteger(b.downvotes) ? b.downvotes : 0;
+
+    const aScore = aUp - aDown;
+    const bScore = bUp - bDown;
+
+    if (bScore !== aScore) return bScore - aScore;
+    if (bUp !== aUp) return bUp - aUp;
+
+    const ar = a.rating ?? 0;
+    const br = b.rating ?? 0;
+    if (br !== ar) return br - ar;
+
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
 }
 
 async function loadReviews() {
@@ -75,12 +142,14 @@ async function loadReviews() {
   const url = hall ? `/api/reviews?hall=${encodeURIComponent(hall)}` : "/api/reviews";
   const { reviews } = await fetchJSON(url);
 
-  if (reviews.length === 0) {
+  const sorted = sortReviews(reviews);
+
+  if (sorted.length === 0) {
     reviewsEl.innerHTML = `<div class="muted">No reviews yet today. Be the first!</div>`;
     return;
   }
 
-  reviewsEl.innerHTML = reviews
+  reviewsEl.innerHTML = sorted
     .map((r) => {
       const up = Number.isInteger(r.upvotes) ? r.upvotes : 0;
       const down = Number.isInteger(r.downvotes) ? r.downvotes : 0;
@@ -92,12 +161,13 @@ async function loadReviews() {
         viewerVote === "down" ? "You voted 👎" :
         "";
 
-      const upDisabled = viewerVote !== null;   // one vote total
-      const downDisabled = viewerVote !== null; // one vote total
+      // One vote per person total
+      const upDisabled = viewerVote !== null;
+      const downDisabled = viewerVote !== null;
 
       return `<div class="review">
         <div class="reviewTop">
-          <strong>${r.hall}</strong>
+          <strong>${escapeHTML(r.hall)}</strong>
           <span class="badge">${stars(r.rating)} (${r.rating})</span>
         </div>
         <div class="muted small">${fmtDate(r.createdAt)}</div>
@@ -114,23 +184,13 @@ async function loadReviews() {
     .join("");
 }
 
-// basic HTML escaping for safety
-function escapeHTML(s) {
-  return String(s)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
 hallFilterEl.addEventListener("change", loadReviews);
+sortSelectEl.addEventListener("change", loadReviews);
 
 // One click handler for all vote buttons (event delegation)
 reviewsEl.addEventListener("click", async (e) => {
   const btn = e.target.closest("button[data-vote]");
   if (!btn) return;
-
   if (btn.disabled) return;
 
   const id = btn.dataset.id;

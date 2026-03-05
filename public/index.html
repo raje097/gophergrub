@@ -8,10 +8,22 @@
   </head>
   <body>
     <header class="container header">
-      <div>
-        <h1>GopherGrub</h1>
-        <p class="muted">Rate University of Minnesota dining halls.</p>
+      <div class="brand">
+        <!-- Small UMN-style logo (inline SVG, no file needed) -->
+        <a class="logoLink" href="/" aria-label="GopherGrub Home">
+            <img
+              src="/assets/uofm_logo.png"
+              alt="University of Minnesota logo"
+              class="umnLogo"
+            />
+          </a>
+
+        <div>
+          <h1>GopherGrub</h1>
+          <p class="muted">Today’s dining hall ratings at the University of Minnesota.</p>
+        </div>
       </div>
+
       <nav class="nav">
         <a class="btn" href="/review.html">Write a review</a>
       </nav>
@@ -19,24 +31,37 @@
 
     <main class="container grid">
       <section class="card">
-        <h2>Overall summary</h2>
+        <h2>Today’s summary</h2>
+        <div id="topHall" class="topHall"></div>
         <div id="summary" class="summary"></div>
       </section>
 
       <section class="card">
-        <div class="row">
-          <h2>Recent reviews</h2>
-          <div class="row">
-            <label class="muted" for="hallFilter">Filter:</label>
-            <select id="hallFilter"></select>
+        <div class="row rowWrap">
+          <h2>Today’s reviews</h2>
+
+          <div class="controls">
+            <div class="control">
+              <label class="muted small" for="hallFilter">Dining hall</label>
+              <select id="hallFilter"></select>
+            </div>
+
+            <div class="control">
+              <label class="muted small" for="sortSelect">Sort</label>
+              <select id="sortSelect">
+                <option value="newest" selected>Newest</option>
+                <option value="top">Top rated</option>
+              </select>
+            </div>
           </div>
         </div>
+
         <div id="reviews" class="reviews"></div>
       </section>
     </main>
 
     <footer class="container footer muted">
-      Built for UMN students • Local demo app
+      Built for UMN students • Daily reset at midnight (CT)
     </footer>
 
     <script type="module" src="./app.js"></script>

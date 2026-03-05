@@ -1,5 +1,38 @@
 {
-  "reviews": [],
-  "lastResetDate": "2026-02-25",
-  "votes": {}
+  "reviews": [
+    {
+      "id": "sPkg3n9TRCyLoKTCdEU-E",
+      "hall": "Comstock Dining Hall",
+      "rating": 5,
+      "comment": "yummy",
+      "createdAt": "2026-03-05T02:22:08.056Z",
+      "upvotes": 0,
+      "downvotes": 1
+    },
+    {
+      "id": "Rcd-Naz7XqaShuaVchVkP",
+      "hall": "Comstock Dining Hall",
+      "rating": 3,
+      "comment": "it was fine ig",
+      "createdAt": "2026-03-05T02:42:59.128Z",
+      "upvotes": 1,
+      "downvotes": 0
+    },
+    {
+      "id": "LioRAKaLFE7M6wYFH0nqv",
+      "hall": "17th Avenue Dining Hall",
+      "rating": 4,
+      "comment": "great, but soda was bad",
+      "createdAt": "2026-03-05T02:43:26.214Z",
+      "upvotes": 0,
+      "downvotes": 0
+    }
+  ],
+  "lastResetDate": "2026-03-04",
+  "votes": {
+    "JOXlhqLj9YsDAZ0UwIs_r": {
+      "sPkg3n9TRCyLoKTCdEU-E": "down",
+      "Rcd-Naz7XqaShuaVchVkP": "up"
+    }
+  }
 }

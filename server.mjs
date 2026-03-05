@@ -9,6 +9,39 @@ import { nanoid } from "nanoid";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+async function moderateText(text) {
+  // If no key is configured (local dev), allow everything
+  if (!OPENAI_API_KEY) return { allowed: true };
+
+  const resp = await fetch("https://api.openai.com/v1/moderations", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "omni-moderation-latest",
+      input: text,
+    }),
+  });
+
+  if (!resp.ok) {
+    // Fail open (allow) or fail closed (block). I'd fail open to avoid breaking submissions.
+    // You can change this depending on your preference.
+    return { allowed: true, reason: "moderation_unavailable" };
+  }
+
+  const data = await resp.json();
+  const result = data?.results?.[0];
+
+  // OpenAI moderation returns a "flagged" boolean at the top-level result
+  const flagged = Boolean(result?.flagged);
+
+  return { allowed: !flagged, flagged, result };
+}
+
 // __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -158,6 +191,13 @@ app.post("/api/reviews", async (req, res) => {
   }
   if (comment.length > 500) {
     return res.status(400).json({ error: "Comment must be <= 500 characters." });
+  }
+
+  const mod = await moderateText(comment);
+  if (!mod.allowed) {
+    return res.status(400).json({
+      error: "Your comment was flagged for inappropriate language. Please revise and try again.",
+    });
   }
 
   const review = {
